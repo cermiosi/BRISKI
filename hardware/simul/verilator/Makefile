@@ -18,10 +18,11 @@ RTL_TOP?= RISCV_core
 #HEX_PROG?=test_shift
 #HEX_PROG?=test_jal_jalr
 #HEX_PROG?=test_slt
-HEX_PROG?=test_bitwise
+#HEX_PROG?=test_bitwise
 #HEX_PROG?=test_immediate_arith
 #HEX_PROG?=test_load_store
 #HEX_PROG?=test_branches
+HEX_PROG?=prog
 
 NUM_THREADS?=16
 NUM_PIPE_STAGES?=16
