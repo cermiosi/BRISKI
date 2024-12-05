@@ -3,7 +3,7 @@
 
 module RISCV_core_tb;
 
-  parameter TB_INIT_FILE_NAME = "loads_stores.inst";
+  parameter TB_INIT_FILE_NAME = "branches.inst";
   localparam TB_INIT_FILE_PATH = "../../software/runs/";
   localparam TB_INIT_FILE = {TB_INIT_FILE_PATH, TB_INIT_FILE_NAME};
   logic [31:0] tb_ROM_instruction;
@@ -26,6 +26,9 @@ module RISCV_core_tb;
 
   int fd_regs;
   int fd_mem;
+  //int fd_inst;
+  //int i;
+  //string line;
   logic BRAM_EN;
 
   task dump_registers();
@@ -51,6 +54,22 @@ module RISCV_core_tb;
       $fclose(fd_mem);
       end
   endtask
+  
+//  task updateInstruction();
+//    forever begin
+//    fd_inst = $fopen("./prog.inst", "r");
+//    repeat(1) @(posedge clk);
+//        i = tb_ROM_addr + 1;
+        
+//        while(i > 0) begin
+//            $fgets(line, fd_inst);
+//        end
+        
+//        tb_ROM_instruction = line;
+//        $display("line read: %s", line);
+//    $fclose(fd_inst);
+//    end
+//  endtask
 
   initial begin
 	  //fork
@@ -62,6 +81,9 @@ module RISCV_core_tb;
             dump_memory();
 	  //join_none;
   end
+//  initial begin
+//            updateInstruction();
+//  end
   initial begin
     clk = 0;
   end
@@ -71,7 +93,7 @@ module RISCV_core_tb;
     reset = 1;
     #200;
     reset = 0;
-    #32000;
+    #16000;
     $finish;
   end
 

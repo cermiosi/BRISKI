@@ -3,6 +3,7 @@
 set time_1 [clock seconds]
 open_checkpoint $outputDir/post_place.dcp
 set WNS [ get_property SLACK [get_timing_paths -max_paths 1 -nworst 1 -setup] ]
+
 # Post Place PhysOpt Looping
 #set NLOOPS 8
 set NLOOPS 12
@@ -12,7 +13,7 @@ set TNS_SRCH_STR "TNS="
 
 if {$WNS < 0.000} {
     # add over constraining
-    #set_clock_uncertainty 0.100 [get_clocks clkout0]
+    set_clock_uncertainty 0.100 [get_clocks clkout0]
     #set_clock_uncertainty 0.200 [get_clocks clkout0]
     #set_clock_uncertainty 0.300 [get_clocks clkout0]
     set TNS [ exec grep $TNS_SRCH_STR vivado.log | tail -1 | sed -n -e "s/^.*$TNS_SRCH_STR//p" | cut -d\  -f 1]
@@ -20,7 +21,6 @@ if {$WNS < 0.000} {
 
     for {set i 0} {$i < $NLOOPS} {incr i} {
         phys_opt_design -directive AggressiveExplore
-        #phys_opt_design -shift_register_opt
         # get WNS / TNS by getting lines with the search string in it (grep),
         # get the last line only (tail -1),
         # extracting everything after the search string (sed), and
@@ -54,7 +54,7 @@ if {$WNS < 0.000} {
     }
 
     # remove over constraining
-    #set_clock_uncertainty 0 [get_clocks clkout0]
+    set_clock_uncertainty 0 [get_clocks clkout0]
 
     #phys_opt_design -directive AggressiveExplore
     #phys_opt_design -directive AlternateFlowWithRetiming

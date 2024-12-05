@@ -1,4 +1,3 @@
-`include "../utils/mmcm_lookup_params.svh"
 module MMCM_clock_gen #(
     parameter int MMCM_OUT_FREQ = 650
 ) (
@@ -7,64 +6,74 @@ module MMCM_clock_gen #(
     output logic CLK_OUT,
     output logic LOCKED
 );
-    // Function to derive Master Divider (D)
-    function int DeriveMasterDiv(input int freq);
-    // Default to 0 if no match found
-    DeriveMasterDiv = 0;
 
-    // Loop through the `desired_freqs` array to find a match
-    for (int i = 0; i < $size(desired_freqs); i++) begin
-        if (freq == desired_freqs[i]) begin
-            // If a match is found, return the corresponding D_value
-	    $display ("Dval = %d", D_values[i]);
-            return D_values[i];
-        end
-    end
+    // Function to derive Master Divider (D)
+    function int DeriveMasterDiv (input int freq);
+        case (freq)
+            100, 150, 200, 250, 300, 350, 360, 370, 380, 390, 
+            400, 420, 450, 500, 550, 600, 650, 660, 670, 675, 
+            680, 700: return 5;
+            default: return 0;
+        endcase
     endfunction
 
     // Function to derive Master Multiplier (M)
     function real DeriveMasterMult (input int freq);
-    // Default to 0 if no match found
-    DeriveMasterMult = 0.0;
-
-    // Loop through the `desired_freqs` array to find a match
-    for (int i = 0; i < $size(desired_freqs); i++) begin
-        if (freq == desired_freqs[i]) begin
-            // If a match is found, return the corresponding M_value
-	    $display ("Mval = %f", M_values[i]);
-            return M_values[i];
-        end
-    end
+        case (freq)
+            100: return 64.0;
+            150, 350, 360: return 63.75;
+            200, 400, 500: return 64.0;
+            250: return 63.75;
+            300, 450: return 63.0;
+            370: return 55.5;
+            380: return 57.0;
+            390: return 58.5;
+            420, 550: return 63.25;
+            600: return 63.0;
+            650: return 61.75;
+            660: return 49.5;
+            670: return 50.25;
+            675: return 60.75;
+            680: return 51.0;
+            700: return 63.0;
+            default: return 0.0;
+        endcase
     endfunction
 
     // Function to derive Output Divider (O)
     function real DeriveOutDiv (input int freq);
-    // Default to 0 if no match found
-    DeriveOutDiv = 0.0;
-
-    // Loop through the `desired_freqs` array to find a match
-    for (int i = 0; i < $size(desired_freqs); i++) begin
-        if (freq == desired_freqs[i]) begin
-            // If a match is found, return the corresponding O_value
-	    $display ("Oval = %f", O_values[i]);
-            return O_values[i];
-        end
-    end
+        case (freq)
+            100: return 16.0;
+            150: return 10.625;
+            200: return 8.0;
+            250: return 6.375;
+            300: return 5.25;
+            350: return 4.5;
+            360: return 4.375;
+            370, 380, 390: return 3.75;
+            400: return 4.0;
+            420: return 3.75;
+            450: return 3.5;
+            500: return 3.125;
+            550: return 2.875;
+            600: return 2.625;
+            650: return 2.375;
+            660, 670, 680: return 1.875;
+            675, 700: return 2.25;
+            default: return 0.0;
+        endcase
     endfunction
 
     logic CLKFBOUT;
     logic clkout0;
 
-    localparam int Dval = DeriveMasterDiv(MMCM_OUT_FREQ);
-    localparam real Mval = DeriveMasterMult(MMCM_OUT_FREQ);
-    localparam real Oval = DeriveOutDiv(MMCM_OUT_FREQ);
     // MMCME4_BASE instantiation
     MMCME4_BASE #(
         .BANDWIDTH("OPTIMIZED"),   // Jitter programming (HIGH, LOW, OPTIMIZED)
-        .CLKFBOUT_MULT_F(Mval),     // Multiply value for all CLKOUT (2.000-64.000) (M counter)
+        .CLKFBOUT_MULT_F(DeriveMasterMult(MMCM_OUT_FREQ)),     // Multiply value for all CLKOUT (2.000-64.000) (M counter)
         .CLKFBOUT_PHASE(0.0),      // Phase offset in degrees of CLKFB (-360.000-360.000)
         .CLKIN1_PERIOD(8),         // Input clock period in ns units, ps resolution (i.e., 33.333 is 30 MHz).
-        .CLKOUT0_DIVIDE_F(Oval),    // Divide amount for CLKOUT0 (1.000-128.000)  (O counter for clk 0)
+        .CLKOUT0_DIVIDE_F(DeriveOutDiv(MMCM_OUT_FREQ)),    // Divide amount for CLKOUT0 (1.000-128.000)  (O counter for clk 0)
         .CLKOUT0_DUTY_CYCLE(0.5),
         .CLKOUT1_DUTY_CYCLE(0.5),
         .CLKOUT2_DUTY_CYCLE(0.5),
@@ -86,7 +95,7 @@ module MMCM_clock_gen #(
         .CLKOUT5_DIVIDE(1),
         .CLKOUT6_DIVIDE(1),
         .CLKOUT4_CASCADE("FALSE"), // Cascade CLKOUT4 counter with CLKOUT6 (FALSE, TRUE)
-        .DIVCLK_DIVIDE(Dval),    // Master division value (1-106) (D counter)
+        .DIVCLK_DIVIDE(DeriveMasterDiv(MMCM_OUT_FREQ)),    // Master division value (1-106) (D counter)
         .IS_CLKFBIN_INVERTED(1'b0), // Optional inversion for CLKFBIN
         .IS_CLKIN1_INVERTED(1'b0),  // Optional inversion for CLKIN1
         .IS_PWRDWN_INVERTED(1'b0),  // Optional inversion for PWRDWN

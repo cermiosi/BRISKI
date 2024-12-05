@@ -1,8 +1,7 @@
 SRC_PATH=../rtl
 TESTBENCH_NAME=RISCV_core_tb
 #PROG?=branches
-#PROG?=loads_stores.inst
-PROG?=prog.inst
+PROG?=loads_stores.inst
 
 all: clean simulate
 

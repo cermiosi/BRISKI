@@ -1,13 +1,13 @@
 `include "riscv_pkg.sv"
+//import riscv_pkg::*;
 module pcreg_vec #(
     parameter DWIDTH = 32,
-    NUM_THREADS = 16,
-    EXE_STAGE = 7
+    DEPTH = 16
 ) (
     input logic reset,
     input logic clk,
-    input logic [$clog2(NUM_THREADS)-1:0] i_thread_index_counter,
-    input logic [$clog2(NUM_THREADS)-1:0] i_thread_index_execute,
+    input logic [$clog2(DEPTH)-1:0] i_thread_index_counter,
+    input logic [$clog2(DEPTH)-1:0] i_thread_index_execute,
     input logic [DWIDTH-1:0] i_pc_in,
     output logic [DWIDTH-1:0] o_pcreg_out
 );
@@ -27,7 +27,7 @@ module pcreg_vec #(
     end else begin
       pcaddrin <= i_thread_index_execute;
       pcdatain <= i_pc_in[11:0];
-      if (counter == EXE_STAGE[$clog2(NUM_THREADS)-1:0]+1) begin
+      if (counter == 7) begin
         we <= 1;
       end else begin
         we <= 0;
@@ -36,7 +36,9 @@ module pcreg_vec #(
     end
   end
 
-  LUT_RAM #(NUM_THREADS, $clog2(NUM_THREADS), 12) PC_MEM_INST (
+  LUT_RAM #(NUM_THREADS, $clog2(
+      NUM_THREADS
+  ), 12) PC_MEM_INST (
       .clka (clk),
       .ena  (1),
       .wea  (we),
@@ -46,7 +48,7 @@ module pcreg_vec #(
       .dob  (pcdataout)
   );
 
-  assign o_pcreg_out = {{($bits(o_pcreg_out)-$bits(pcdataout)){1'b0}}, pcdataout}; // zero-extend to match the bit widths
+  assign o_pcreg_out = {20'b0, pcdataout};
 
 endmodule
 
