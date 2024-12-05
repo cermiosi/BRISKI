@@ -3,4 +3,5 @@ memory.txt
 software/runs/
 waveform.vcd
 prog.s
+prog.S
 prog.lds
