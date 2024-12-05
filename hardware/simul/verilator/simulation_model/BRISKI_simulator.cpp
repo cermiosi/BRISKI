@@ -9,7 +9,7 @@
 
 #define ecall_instruction 0x00000073
 
-const int NUM_HARTS = 16;
+const int NUM_HARTS = NUM_THREADS;
 const int MEM_SIZE = 4096; // 4KB memory
 
 class BRISKI {
@@ -19,7 +19,7 @@ public:
     void run();
     void dumpMemory();
     void dumpMemory(std::string filename);
-    //void compareMemory(const uint8_t* rtl_memory);
+    void dumpRegFileSet(const std::string& filename) const;
 
 private:
     uint32_t registers[NUM_HARTS][32]; // 32 registers per hart
@@ -101,6 +101,7 @@ void BRISKI::run() {
         uint32_t instruction;
 	while (true) {
             instruction = fetchInstruction(hart_id);
+	    //std::cout << "instr:" <<  std::hex << instruction << std::endl;
             if (instruction == ecall_instruction) {// custom end of program marker
 		break;
 	    }
@@ -115,6 +116,7 @@ void BRISKI::run() {
         std::cout << "Dumping Memory Contents.." << std::endl;
         for (size_t i = 0; i < sizeof(memory); i+=4) {
             std::cout << "memory [" << std::dec << std::setw(4) << std::setfill('0') << i << "] : 0x" << std::hex << std::setw(8) << std::setfill('0') << *reinterpret_cast<uint32_t*>(&memory[i]) << std::endl;
+            //std::cout << "memory [" << std::dec << std::setw(4) << std::setfill('0') << i/4 << "] : 0x" << std::hex << std::setw(8) << std::setfill('0') << *reinterpret_cast<uint32_t*>(&memory[i]) << std::endl;
         }
     }
 
@@ -128,14 +130,80 @@ void BRISKI::run() {
         memoryFile << "Dumping Memory Contents.." << std::endl;
         for (size_t i = 0; i < sizeof(memory); i+=4) {
             memoryFile << "memory [" << std::dec << std::setw(4) << std::setfill('0') << i << "] : 0x" << std::hex << std::setw(8) << std::setfill('0') << *reinterpret_cast<uint32_t*>(&memory[i]) << std::endl;
+            //memoryFile << "memory [" << std::dec << std::setw(4) << std::setfill('0') << i/4 << "] : 0x" << std::hex << std::setw(8) << std::setfill('0') << *reinterpret_cast<uint32_t*>(&memory[i]) << std::endl;
         }
 	memoryFile.close();
     }
+    void BRISKI::dumpRegFileSet(const std::string& filename = "") const {
+        std::ostream* os = nullptr;
+        std::ofstream outfile;
 
+        if (filename.empty()) {
+            // If no filename is provided, dump to screen
+            os = &std::cout;
+        } else {
+            // If a filename is provided, open the file
+            outfile.open(filename);
+            if (outfile.is_open()) {
+                os = &outfile;
+            } else {
+                std::cerr << "Error: Unable to open file " << filename << " for writing." << std::endl;
+                return;
+            }
+        }
+
+	// ABI register names as per RISC-V standard
+        const char* abi_names[32] = {
+            "zero", "ra", "sp", "gp", "tp", "t0", "t1", "t2",
+            "s0/fp", " s1", "a0", "a1", "a2", "a3", "a4", "a5",
+            "a6", "a7", "s2", "s3", "s4", "s5", "s6", "s7",
+            "s8", "s9", "s10", "s11", "t3", "t4", "t5", "t6"
+        };
+
+        // header line with thread IDs
+        *os << "+-------------+";
+        for (uint32_t hart = 0; hart < NUM_HARTS; ++hart) {
+            *os << " Hart  " << std::setw(2) << hart << " |";
+        }
+        *os << std::endl;
+
+        // separator line
+        *os << "+-------------+";
+        for (uint32_t hart = 0; hart < NUM_HARTS; ++hart) {
+            *os << "----------+";
+        }
+        *os << std::endl;
+
+        // Loop over each register index (0-31)
+        for (uint32_t reg_idx = 0; reg_idx < 32; ++reg_idx) {
+            // Print the register label (x0, x1, x2, ...)
+           // *os << "|   x" << std::dec << std::setw(2) << std::setfill(' ') <<  reg_idx << "   |";
+	    *os << "| " << std::setw(5) << std::setfill(' ') << abi_names[reg_idx] << " (x" << std::setw(2) << std::dec << reg_idx << ") |";
+            // Print each hart's register value in hex format
+            for (uint32_t hart = 0; hart < NUM_HARTS; ++hart) {
+                *os << " " << std::setw(8) << std::hex << std::setfill('0') << registers[hart][reg_idx] << " |";
+            }
+            *os << std::endl;
+
+            // the separator line after each row
+            *os << "+-------------+";
+            for (uint32_t hart = 0; hart < NUM_HARTS; ++hart) {
+                *os << "----------+";
+            }
+            *os << std::endl;
+        }
+
+        // Close the file if it was opened
+        if (outfile.is_open()) {
+            outfile.close();
+            std::cout << "Dumped to " << filename << std::endl;
+        }
+    }
 // Fetch instruction for a hart
 uint32_t BRISKI::fetchInstruction(uint32_t hart_id) {
     uint32_t address = pc[hart_id];
     if (address < MEM_SIZE - 4) {
+        //std::cout << std::hex << address << std::endl;
         return *reinterpret_cast<uint32_t*>(&memory[address]);
     }
     return 0;
@@ -229,6 +297,7 @@ void BRISKI::executeInstruction(uint32_t instruction, uint32_t hart_id) {
                     break;
                 case 0x1: // LH
                     registers[hart_id][rd] = *reinterpret_cast<int16_t*>(&memory[registers[hart_id][rs1] + imm]);
+		    //std::cout << "half signed = " << std::hex << registers[hart_id][rd] << std::endl;
                     break;
                 case 0x2: // LW
                     registers[hart_id][rd] = *reinterpret_cast<int32_t*>(&memory[registers[hart_id][rs1] + imm]);
@@ -314,7 +383,7 @@ void BRISKI::executeInstruction(uint32_t instruction, uint32_t hart_id) {
         case 0x6F: // JAL
             imm = ((instruction >> 31) << 20) | (((instruction >> 21) & 0x3FF) << 1) | (((instruction >> 20) & 0x1) << 11) | (((instruction >> 12) & 0xFF) << 12);
             registers[hart_id][rd] = pc[hart_id] + 4;
-            pc[hart_id] += imm;
+            pc[hart_id] += (int32_t(imm<<11))>>11 ;
             break;
         case 0x67: // JALR
             imm = (int32_t)instruction >> 20;
@@ -322,6 +391,7 @@ void BRISKI::executeInstruction(uint32_t instruction, uint32_t hart_id) {
                 uint32_t temp = pc[hart_id] + 4;
                 pc[hart_id] = (registers[hart_id][rs1] + imm) & ~1;  //(ensure LSB is 0)
                 registers[hart_id][rd] = temp;
+		//std::cout<< "next_pc: " << std::hex << pc[hart_id] <<std::endl;
             }
             break;
         case 0x0F: // FENCE
@@ -362,11 +432,14 @@ void BRISKI::executeInstruction(uint32_t instruction, uint32_t hart_id) {
 	        switch (funct5) {
                     case 0x02 : // LR
 			    if (!valid_reserved_set) {
-			        valid_reserved_set = true; 
                                 registers[hart_id][rd] = *reinterpret_cast<uint32_t*>(&memory[registers[hart_id][rs1]]);
 			        reserved_addr = registers[hart_id][rs1]; 
 				reserving_hart = hart_id;
+			    } else if (reserving_hart == hart_id) {
+                                registers[hart_id][rd] = *reinterpret_cast<uint32_t*>(&memory[registers[hart_id][rs1]]);
+			        reserved_addr = registers[hart_id][rs1]; 
 			    }
+			    valid_reserved_set = true; 
 			    // [DEBUG]
 			    // std::cout << "LR " << hart_id << std::endl;
 			    break;
@@ -379,6 +452,9 @@ void BRISKI::executeInstruction(uint32_t instruction, uint32_t hart_id) {
 				    memory[registers[hart_id][rs1]+3] = (uint8_t)((registers[hart_id][rs2] >> 24)  & 0xFF);
 
 				    registers[hart_id][rd] = 0;
+			            valid_reserved_set = false;
+			    }
+			    if (reserving_hart == hart_id) {
 			            valid_reserved_set = false;
 			    }
 			    // [DEBUG]
@@ -423,6 +499,7 @@ int main() {
     // dump memory contents
     briski.dumpMemory("memory.txt");
     //briski.dumpMemory();
+    briski.dumpRegFileSet("regfiles.txt");
 
     return 0;
 }
