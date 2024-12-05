@@ -3,8 +3,10 @@ HEX_SRC_PATH?= ../../../software
 FULL_HEX_SRC_PATH?= $(HEX_SRC_PATH)/runs
 RTL_TOP?= RISCV_core
 FLAGS = -Wall --trace
-HEX_PROG?=lower_upper_byte
+#HEX_PROG?=lower_upper_byte
 #HEX_PROG?=loads_stores
+HEX_PROG?=prog
+#HEX_PROG?=test
 CXXFLAGS= -DTB_INIT_FILE='\"$(FULL_HEX_SRC_PATH)/$(HEX_PROG).inst\"'
 
 all: clean compile build run

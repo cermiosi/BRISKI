@@ -1,4 +1,4 @@
-PROG?=lower_upper_byte
+PROG?=prog
 RUN_DIR?=runs
 
 hex_gen: clean compile_link objdump_elf
@@ -29,7 +29,13 @@ objdump_elf: compile_link
 	cd $(RUN_DIR) && riscv64-unknown-elf-objdump -mriscv:rv32 -d -j .text -s -j .data $(PROG).elf > $(PROG).asm
 clean:
 	#rm -f $(PROG).elf $(PROG).bin $(PROG).inst
+	#rm -rf $(RUN_DIR)  # replaced with code below because this line would delete the .txt
+	cp /home/user/bachelor/BRISKI/software/$(RUN_DIR)/input.txt /home/user/bachelor/BRISKI/software/input.txt
 	rm -rf $(RUN_DIR)
+	mkdir -p $(RUN_DIR)
+	cp /home/user/bachelor/BRISKI/software/input.txt /home/user/bachelor/BRISKI/software/$(RUN_DIR)/input.txt
+	rm -f /home/user/bachelor/BRISKI/software/input.txt
+
 format:
 	cd $(RUN_DIR) && sed -i '1,7d' $(PROG).inst
 	cd $(RUN_DIR) && sed -i -E 's/^[[:space:]]+[^:]+:[[:space:]]+([^[:space:]]+)[[:space:]]+.*/\1/' $(PROG).inst
